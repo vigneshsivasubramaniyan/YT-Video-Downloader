@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premiere Pro YouTube Downloader Extension</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        premiere: {
+                            bg: '#1e1e1e',
+                            panel: '#262626',
+                            border: '#333333',
+                            hover: '#383838',
+                            active: '#005fb8',
+                            accent: '#3b82f6',
+                            text: '#cccccc',
+                            subtext: '#888888',
+                            input: '#121212'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            color: #cccccc;
+            user-select: none;
+        }
+        /* Custom scrollbar matching Adobe aesthetic */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #505050;
+        }
+        /* Range slider custom styling */
+        input[type=range] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-premiere-bg text-premiere-text h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Application / Panel Header -->
+    <header class="bg-premiere-panel border-b border-premiere-border px-4 py-2 flex items-center justify-between select-none">
+        <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full bg-blue-600 flex items-center justify-center text-[8px] font-bold text-white">Pr</div>
+            <span class="text-xs font-semibold tracking-wide text-gray-200">YT Downloader & Importer</span>
+            <span class="text-[10px] bg-premiremap bg-neutral-800 text-gray-400 px-1.5 py-0.5 rounded border border-premiere-border">v1.4.2</span>
+        </div>
+        <div class="flex items-center space-x-3 text-gray-400 text-xs">
+            <button title="Workspace Settings" class="hover:text-white transition"><i class="fa-solid fa-gear"></i></button>
+            <button title="Panel Options" class="hover:text-white transition"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- Left Pane: Input, Metadata & Trimming Controls -->
+        <div class="w-full md:w-1/2 flex flex-col border-r border-premiere-border bg-premiere-panel/40 overflow-y-auto p-4 space-y-4">
+            
+            <!-- Link Input Section -->
+            <div class="space-y-1.5">
+                <label class="block text-[11px] font-medium uppercase tracking-wider text-premiere-subtext">YouTube Video URL</label>
+                <div class="flex space-x-2">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-premiere-subtext">
+                            <i class="fa-brands fa-youtube text-red-500"></i>
+                        </span>
+                        <input type="text" id="urlInput" placeholder="Paste YouTube link (e.g., https://youtu.be/...)" 
+                            class="w-full pl-9 pr-3 py-2 bg-premiere-input border border-premiere-border rounded text-xs text-white focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                    <button onclick="loadVideoMetadata()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-xs font-medium transition shadow-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Fetch</span>
+                    </button>
+                </div>
+                <!-- Quick Demo Links -->
+                <div class="flex items-center space-x-2 pt-1">
+                    <span class="text-[10px] text-premiere-subtext">Quick Demos:</span>
+                    <button onclick="setDemoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')" class="text-[10px] text-blue-400 hover:underline">Cinematic Nature 4K</button>
+                    <span class="text-premiere-border">•</span>
+                    <button onclick="setDemoUrl('https://www.youtube.com/watch?v=jNQXAC9IVRw')" class="text-[10px] text-blue-400 hover:underline">Urban Timelapse</button>
+                </div>
+            </div>
+
+            <!-- Video Metadata Card (Initially Hidden or Placeholder) -->
+            <div id="metadataContainer" class="bg-premiere-panel border border-premiere-border rounded-lg p-3 space-y-3 opacity-60 transition-all">
+                <div class="flex space-x-3 items-start">
+                    <div class="relative w-28 h-16 bg-neutral-900 rounded overflow-hidden flex-shrink-0 border border-premiere-border">
+                        <img id="videoThumb" src="https://placehold.co/160x90/1a1a1a/555555?text=No+Video" alt="Thumbnail" class="w-full h-full object-cover">
+                        <span id="videoDurationBadge" class="absolute bottom-1 right-1 bg-black/80 text-[9px] px-1 rounded text-white font-mono">00:00</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="videoTitle" class="text-xs font-semibold text-white truncate">Paste a URL to load metadata</h3>
+                        <p id="videoChannel" class="text-[11px] text-premiere-subtext truncate">Channel name will appear here</p>
+                        <div class="flex items-center space-x-2 mt-2">
+                            <span id="videoResTag" class="text-[9px] bg-neutral-800 text-gray-300 px-1.5 py-0.5 rounded border border-premiere-border">Max: 1080p60</span>
+                            <span id="videoSizeTag" class="text-[9px] bg-neutral-800 text-gray-300 px-1.5 py-0.5 rounded border border-premiere-border">Est: -- MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clip Trimming & Duration Controls -->
+            <div class="bg-premiere-panel border border-premiere-border rounded-lg p-3 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-medium uppercase tracking-wider text-premiere-subtext">Clip Trimming & Range</span>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-[11px] text-premiere-subtext cursor-pointer flex items-center space-x-1">
+                            <input type="checkbox" id="enableTrim" class="rounded bg-premiere-input border-premiere-border text-blue-600 focus:ring-0">
+                            <span>Trim Clip</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Trim Visualizer / Range Sliders -->
+                <div id="trimControls" class="space-y-3 pt-1 opacity-40 pointer-events-none transition-opacity">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-premiere-subtext mb-1">In Point (Start)</label>
+                            <div class="flex items-center bg-premiere-input border border-premiere-border rounded px-2 py-1">
+                                <i class="fa-solid fa-hourglass-start text-[10px] text-blue-400 mr-2"></i>
+                                <input type="text" id="startTimeInput" value="00:00:00" class="w-full bg-transparent text-xs text-white font-mono focus:outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-premiere-subtext mb-1">Out Point (End)</label>
+                            <div class="flex items-center bg-premiere-input border border-premiere-border rounded px-2 py-1">
+                                <i class="fa-solid fa-hourglass-end text-[10px] text-blue-400 mr-2"></i>
+                                <input type="text" id="endTimeInput" value="00:03:20" class="w-full bg-transparent text-xs text-white font-mono focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dual Slider representation -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] text-premiere-subtext font-mono">
+                            <span id="sliderStartLabel">00:00</span>
+                            <span id="selectedDurationLabel" class="text-blue-400 font-semibold">Duration: 03:20</span>
+                            <span id="sliderEndLabel">03:20</span>
+                        </div>
+                        <input type="range" id="trimRange" min="0" max="200" value="200" class="w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Settings (Format & Quality) -->
+            <div class="bg-premiere-panel border border-premiere-border rounded-lg p-3 space-y-3">
+                <span class="block text-[11px] font-medium uppercase tracking-wider text-premiere-subtext">Export & Format Settings</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-premiere-subtext mb-1">Resolution / Quality</label>
+                        <select id="qualitySelect" class="w-full bg-premiere-input border border-premiere-border rounded p-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="1080p">1080p (Full HD - MP4)</option>
+                            <option value="4k">2160p (4K Ultra HD - MP4)</option>
+                            <option value="720p">720p (HD - MP4)</option>
+                            <option value="audio">Audio Only (WAV / 320kbps)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-premiere-subtext mb-1">Premiere Bin Destination</label>
+                        <select id="binSelect" class="w-full bg-premiere-input border border-premiere-border rounded p-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="Root">Root (Project Panel)</option>
+                            <option value="Footage">📁 YouTube Footage</option>
+                            <option value="B-Roll">📁 B-Roll & References</option>
+                            <option value="Audio">📁 Downloaded Audio</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div class="pt-2">
+                <button id="downloadBtn" onclick="startDownloadProcess()" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white py-2.5 rounded text-xs font-semibold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download & Import to Premiere</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Right Pane: Progress & Project Queue -->
+        <div class="w-full md:w-1/2 flex flex-col bg-premiere-bg overflow-y-auto p-4 space-y-4">
+            
+            <!-- Active Download / Progress Box -->
+            <div id="progressCard" class="bg-premiere-panel border border-premiere-border rounded-lg p-4 space-y-3 hidden">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <div class="animate-spin text-blue-500"><i class="fa-solid fa-circle-notch"></i></div>
+                        <span id="progressTitle" class="text-xs font-semibold text-white">Downloading & Transcoding...</span>
+                    </div>
+                    <span id="progressPercent" class="text-xs font-mono text-blue-400 font-semibold">0%</span>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full bg-neutral-900 rounded-full h-2 overflow-hidden border border-premiere-border">
+                    <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-150"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-premiere-subtext font-mono">
+                    <span id="progressStatusText">Connecting to yt-dlp worker...</span>
+                    <span id="progressEta">ETA: calculating</span>
+                </div>
+            </div>
+
+            <!-- Queue & Recent Downloads Header -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-semibold text-white uppercase tracking-wider">Project Media Queue</span>
+                    <span id="queueCount" class="bg-neutral-800 text-premiere-subtext text-[10px] px-2 py-0.5 rounded-full border border-premiere-border">2 items</span>
+                </div>
+                <button onclick="clearQueue()" class="text-[11px] text-premiere-subtext hover:text-white transition">Clear History</button>
+            </div>
+
+            <!-- Queue List -->
+            <div id="queueList" class="space-y-2.5">
+                <!-- Mock Item 1 -->
+                <div class="bg-premiere-panel border border-premiere-border rounded-lg p-3 flex items-center justify-between hover:border-blue-500/50 transition">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-12 h-8 bg-neutral-900 rounded overflow-hidden flex-shrink-0 relative">
+                            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=160&auto=format&fit=crop&q=60" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-medium text-white truncate">Cinematic 4K Drone Footage - Alps</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-premiere-subtext mt-0.5">
+                                <span class="text-green-400"><i class="fa-solid fa-check"></i> Imported</span>
+                                <span>•</span>
+                                <span>1080p60 MP4</span>
+                                <span>•</span>
+                                <span>01:45</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+                        <button onclick="showNotification('Sent timeline marker to active sequence')" title="Send to Timeline" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-film"></i>
+                        </button>
+                        <button onclick="showNotification('Revealed in Project Panel / Bin')" title="Reveal in Project" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mock Item 2 -->
+                <div class="bg-premiere-panel border border-premiere-border rounded-lg p-3 flex items-center justify-between hover:border-blue-500/50 transition">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-12 h-8 bg-neutral-900 rounded overflow-hidden flex-shrink-0 relative">
+                            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=160&auto=format&fit=crop&q=60" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-medium text-white truncate">Lo-Fi Chill Beats Background Audio</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-premiere-subtext mt-0.5">
+                                <span class="text-green-400"><i class="fa-solid fa-check"></i> Imported</span>
+                                <span>•</span>
+                                <span>Audio WAV</span>
+                                <span>•</span>
+                                <span>03:10</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+                        <button onclick="showNotification('Sent timeline marker to active sequence')" title="Send to Timeline" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-film"></i>
+                        </button>
+                        <button onclick="showNotification('Revealed in Project Panel / Bin')" title="Reveal in Project" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extension Info Footer -->
+            <div class="mt-auto bg-premiere-panel/50 border border-premiere-border rounded-lg p-3 text-[11px] text-premiere-subtext space-y-1">
+                <div class="flex items-center justify-between text-white font-medium">
+                    <span><i class="fa-solid fa-server text-green-500 mr-1.5"></i> Helper Daemon Connected</span>
+                    <span class="text-[10px] text-blue-400 font-mono">Port 48201</span>
+                </div>
+                <p>Downloaded clips are automatically transcoded to H.264 / Apple ProRes proxy standards and added to your active Premiere bin instantly.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-neutral-900 border border-blue-500/50 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-check text-blue-400 text-lg"></i>
+        <div>
+            <h5 id="toastTitle" class="text-xs font-semibold">Success</h5>
+            <p id="toastMessage" class="text-[10px] text-gray-400">Action completed successfully.</p>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Sample Video Database for demo links
+        const videoDatabase = {
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ': {
+                title: 'Cinematic Nature & Mountain Drone Relax 4K',
+                channel: 'NatureVibes HD',
+                duration: '04:15',
+                durationSec: 255,
+                thumb: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&auto=format&fit=crop&q=80',
+                size: '142 MB',
+                res: 'Max: 4K 60fps'
+            },
+            'https://www.youtube.com/watch?v=jNQXAC9IVRw': {
+                title: 'Urban City Timelapse & Neon Night Traffic',
+                channel: 'Cityscape Daily',
+                duration: '02:30',
+                durationSec: 150,
+                thumb: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=80',
+                size: '88 MB',
+                res: 'Max: 1080p60'
+            }
+        };
+
+        let currentLoadedVideo = null;
+
+        function setDemoUrl(url) {
+            document.getElementById('urlInput').value = url;
+            loadVideoMetadata();
+        }
+
+        function loadVideoMetadata() {
+            const url = document.getElementById('urlInput').value.trim();
+            const container = document.getElementById('metadataContainer');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            if (!url) {
+                showNotification('Please enter a valid YouTube URL', 'Error');
+                return;
+            }
+
+            // Fallback mock if URL not in preset
+            const videoData = videoDatabase[url] || {
+                title: 'Custom YouTube Video Stream (' + url.slice(0, 20) + '...)',
+                channel: 'Independent Creator',
+                duration: '03:20',
+                durationSec: 200,
+                thumb: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
+                size: '115 MB',
+                res: 'Max: 1080p MP4'
+            };
+
+            currentLoadedVideo = videoData;
+
+            // Populate UI
+            document.getElementById('videoTitle').innerText = videoData.title;
+            document.getElementById('videoChannel').innerText = videoData.channel;
+            document.getElementById('videoDurationBadge').innerText = videoData.duration;
+            document.getElementById('videoThumb').src = videoData.thumb;
+            document.getElementById('videoResTag').innerText = videoData.res;
+            document.getElementById('videoSizeTag').innerText = 'Est: ' + videoData.size;
+            
+            document.getElementById('endTimeInput').value = videoData.duration;
+            document.getElementById('sliderEndLabel').innerText = videoData.duration;
+            document.getElementById('selectedDurationLabel').innerText = 'Duration: ' + videoData.duration;
+
+            container.classList.remove('opacity-60');
+            downloadBtn.removeAttribute('disabled');
+            showNotification('Video metadata fetched successfully!', 'Ready');
+        }
+
+        // Toggle trim controls
+        const enableTrimCheckbox = document.getElementById('enableTrim');
+        const trimControls = document.getElementById('trimControls');
+
+        enableTrimCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                trimControls.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                trimControls.classList.add('opacity-40', 'pointer-events-none');
+            }
+        });
+
+        // Start Download Simulation
+        function startDownloadProcess() {
+            if (!currentLoadedVideo) return;
+
+            const progressCard = document.getElementById('progressCard');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressStatusText = document.getElementById('progressStatusText');
+            const progressTitle = document.getElementById('progressTitle');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            progressCard.classList.remove('hidden');
+            downloadBtn.setAttribute('disabled', 'true');
+            
+            let progress = 0;
+            progressTitle.innerText = `Downloading & Importing "${currentLoadedVideo.title.slice(0, 25)}..."`;
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 8) + 4;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    
+                    // Finish animation
+                    progressBar.style.width = '100%';
+                    progressPercent.innerText = '100%';
+                    progressStatusText.innerText = 'Imported successfully into Premiere Project Bin';
+                    
+                    setTimeout(() => {
+                        progressCard.classList.add('hidden');
+                        downloadBtn.removeAttribute('disabled');
+                        progressBar.style.width = '0%';
+                        addQueueItem(currentLoadedVideo);
+                        showNotification('Video added to Premiere Pro Project Panel!', 'Import Complete');
+                    }, 800);
+                } else {
+                    progressBar.style.width = progress + '%';
+                    progressPercent.innerText = progress + '%';
+                    if (progress < 40) {
+                        progressStatusText.innerText = 'Fetching stream segments via yt-dlp...';
+                    } else if (progress < 80) {
+                        progressStatusText.innerText = 'Transcoding to H.264 (.mp4)...';
+                    } else {
+                        progressStatusText.innerText = 'Sending IPC command to Adobe Premiere Pro...';
+                    }
+                }
+            }, 150);
+        }
+
+        function addQueueItem(video) {
+            const queueList = document.getElementById('queueList');
+            const itemHTML = `
+                <div class="bg-premiere-panel border border-premiere-border rounded-lg p-3 flex items-center justify-between hover:border-blue-500/50 transition animate-pulse">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-12 h-8 bg-neutral-900 rounded overflow-hidden flex-shrink-0 relative">
+                            <img src="${video.thumb}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-medium text-white truncate">${video.title}</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-premiere-subtext mt-0.5">
+                                <span class="text-green-400"><i class="fa-solid fa-check"></i> Imported</span>
+                                <span>•</span>
+                                <span>1080p MP4</span>
+                                <span>•</span>
+                                <span>${video.duration}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+                        <button onclick="showNotification('Sent timeline marker to active sequence')" title="Send to Timeline" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-film"></i>
+                        </button>
+                        <button onclick="showNotification('Revealed in Project Panel / Bin')" title="Reveal in Project" class="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-gray-300 hover:text-white transition text-xs">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            queueList.insertAdjacentHTML('afterbegin', itemHTML);
+            
+            // Update counter
+            const countElem = document.getElementById('queueCount');
+            const currentCount = queueList.children.length;
+            countElem.innerText = currentCount + ' items';
+        }
+
+        function clearQueue() {
+            document.getElementById('queueList.innerHTML', '');
+            document.getElementById('queueList').innerHTML = '<div class="text-center py-6 text-[11px] text-premiere-subtext">Queue is empty</div>';
+            document.getElementById('queueCount').innerText = '0 items';
+            showNotification('Download queue cleared', 'Cleared');
+        }
+
+        function showNotification(message, title = 'Notification') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').innerText = title;
+            document.getElementById('toastMessage').innerText = message;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

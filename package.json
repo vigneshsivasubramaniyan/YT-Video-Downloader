@@ -1,0 +1,40 @@
+{
+  "name": "filmcraft-youtube-export-panel",
+  "version": "0.2.0",
+  "description": "Windows desktop companion panel for FilmCraft video workflows",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "in.madrasmic.filmcraft.youtubeexport",
+    "productName": "FilmCraft YouTube Export Panel",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "app.py",
+      "requirements.txt",
+      "static/**/*",
+      "README.md",
+      "scripts/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "asar": false
+  }
+}

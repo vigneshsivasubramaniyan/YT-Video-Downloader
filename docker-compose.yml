@@ -1,0 +1,9 @@
+services:
+  filmcraft-youtube-helper:
+    build: .
+    container_name: filmcraft-youtube-helper
+    ports:
+      - "48201:48201"
+    volumes:
+      - ./downloads:/app/downloads
+    restart: unless-stopped
