@@ -101,4 +101,3 @@ Note: the current Electron packaging configuration is a developer build, not a f
 ## Rights and safety
 
 Use only videos you own or are authorized to download. Follow YouTube's terms and applicable copyright rules. This tool does not bypass DRM or access controls.
-# YT-Video-Downloader
